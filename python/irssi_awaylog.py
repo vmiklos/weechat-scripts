@@ -38,6 +38,7 @@ SCRIPT_DESC     = "Emulates irssis awaylog behaviour"
 
 global_state = {}
 global_state["awaylog"] = []
+global_state["is_away"] = False
 
 def replaylog():
     global global_state
@@ -56,12 +57,16 @@ def away_cb(data, bufferp, command):
 
     if not isaway:
         replaylog()
+        global_state["is_away"] = False
+    else:
+        global_state["is_away"] = True
     return wc.WEECHAT_RC_OK
 
 def msg_cb(data, bufferp, date, tagsn, isdisplayed, ishilight, prefix, message):
     global global_state
 
-    isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
+    #isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
+    isaway = global_state["is_away"]
     isprivate = wc.buffer_get_string(bufferp, "localvar_type") == "private"
 
     # catch private messages or highlights when away
