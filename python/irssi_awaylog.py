@@ -22,11 +22,11 @@
 
 import_ok = True
 try:
-	import weechat as wc
+    import weechat as wc
 except Exception:
-	print "This script must be run under WeeChat."
-	print "Get WeeChat now at: http://www.weechat.org/"
-	import_ok = False
+    print("This script must be run under WeeChat.")
+    print("Get WeeChat now at: http://www.weechat.org/")
+    import_ok = False
 
 import time
 
@@ -36,53 +36,54 @@ SCRIPT_VERSION  = "0.3"
 SCRIPT_LICENSE  = "GPL3"
 SCRIPT_DESC     = "Emulates irssis awaylog behaviour"
 
-awaylog = []
+global_state = {}
+global_state["awaylog"] = []
 
 def replaylog():
-	global awaylog
+    global global_state
 
-	if awaylog:
-		wc.prnt("", "-->\t")
-		for a in awaylog:
-			wc.prnt_date_tags("", a[0], "", a[1])
-		wc.prnt("", "<--\t")
+    if global_state["awaylog"]:
+        wc.prnt("", "-->\t")
+        for a in global_state["awaylog"]:
+            wc.prnt_date_tags("", a[0], "", a[1])
+        wc.prnt("", "<--\t")
 
-		awaylog = []
+        global_state["awaylog"] = []
 
 
 def away_cb(data, bufferp, command):
-	isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
+    isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
 
-	if not isaway:
-		replaylog()
-	return wc.WEECHAT_RC_OK
+    if not isaway:
+        replaylog()
+    return wc.WEECHAT_RC_OK
 
 def msg_cb(data, bufferp, date, tagsn, isdisplayed, ishilight, prefix, message):
-	global awaylog
+    global global_state
 
-	isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
-	isprivate = wc.buffer_get_string(bufferp, "localvar_type") == "private"
+    isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
+    isprivate = wc.buffer_get_string(bufferp, "localvar_type") == "private"
 
-	# catch private messages or highlights when away
-	if isaway and (isprivate or int(ishilight)):
-		logentry = "awaylog\t"
+    # catch private messages or highlights when away
+    if isaway and (isprivate or int(ishilight)):
+        logentry = "awaylog\t"
 
-		if int(ishilight) and not isprivate:
-			buffer = (wc.buffer_get_string(bufferp, "short_name") or
-					wc.buffer_get_string(bufferp, "name"))
-		else:
-			buffer = "priv"
+        if int(ishilight) and not isprivate:
+            buffer = (wc.buffer_get_string(bufferp, "short_name") or
+                    wc.buffer_get_string(bufferp, "name"))
+        else:
+            buffer = "priv"
 
-		buffer = wc.color("green") + buffer + wc.color("reset")
+        buffer = wc.color("green") + buffer + wc.color("reset")
 
-		logentry += "[" + buffer + "]"
-		logentry += wc.color("default") + " <" + wc.color("blue") + prefix + wc.color("default") + "> " + wc.color("reset") + message
+        logentry += "[" + buffer + "]"
+        logentry += wc.color("default") + " <" + wc.color("blue") + prefix + wc.color("default") + "> " + wc.color("reset") + message
 
-		awaylog.append((int(time.time()), logentry))
-	return wc.WEECHAT_RC_OK
+        global_state["awaylog"].append((int(time.time()), logentry))
+    return wc.WEECHAT_RC_OK
 
 if __name__ == "__main__":
-	if import_ok and wc.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
-		wc.hook_print("", "notify_message", "", 1, "msg_cb", "")
-		wc.hook_print("", "notify_private", "", 1, "msg_cb", "")
-		wc.hook_command_run("/away", "away_cb", "")
+    if import_ok and wc.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE, SCRIPT_DESC, "", ""):
+        wc.hook_print("", "notify_message", "", 1, "msg_cb", "")
+        wc.hook_print("", "notify_private", "", 1, "msg_cb", "")
+        wc.hook_command_run("/away", "away_cb", "")
