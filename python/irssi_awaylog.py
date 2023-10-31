@@ -3,8 +3,6 @@
 # irssi_awaylog.py: emulates irssi awaylog (replay of hilights and privmsg)
 # - 2013, henrik <henrik at affekt dot org>
 #
-# TODO: store awaylog in a file instead of memory
-#
 ###########################################################################
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,6 +27,8 @@ except Exception:
     import_ok = False
 
 import time
+import os
+from datetime import datetime
 
 SCRIPT_NAME     = "irssi_awaylog"
 SCRIPT_AUTHOR   = "henrik"
@@ -39,6 +39,7 @@ SCRIPT_DESC     = "Emulates irssis awaylog behaviour"
 global_state = {}
 global_state["awaylog"] = []
 global_state["is_away"] = False
+awaylog_path = os.path.expanduser("~/.local/share/weechat/logs/away.log")
 
 def replaylog():
     global global_state
@@ -55,11 +56,18 @@ def replaylog():
 def away_cb(data, bufferp, command):
     isaway = wc.buffer_get_string(bufferp, "localvar_away") != ""
 
+    now = time.time()
     if not isaway:
         replaylog()
         global_state["is_away"] = False
+        with open(awaylog_path, "a") as stream:
+            now_string = datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M:%S')
+            stream.write(now_string + "\t<--\t\n")
     else:
         global_state["is_away"] = True
+        with open(awaylog_path, "a") as stream:
+            now_string = datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M:%S')
+            stream.write(now_string + "\t-->\t\n")
     return wc.WEECHAT_RC_OK
 
 def msg_cb(data, bufferp, date, tagsn, isdisplayed, ishilight, prefix, message):
@@ -79,12 +87,20 @@ def msg_cb(data, bufferp, date, tagsn, isdisplayed, ishilight, prefix, message):
         else:
             buffer = "priv"
 
+        buffer_nocolor = buffer
         buffer = wc.color("green") + buffer + wc.color("reset")
 
         logentry += "[" + buffer + "]"
+        logentry_nocolor = "[" + buffer_nocolor + "]"
         logentry += wc.color("default") + " <" + wc.color("blue") + prefix + wc.color("default") + "> " + wc.color("reset") + message
+        logentry_nocolor += " <" + prefix + "> " + message
 
-        global_state["awaylog"].append((int(time.time()), logentry))
+        now = time.time()
+        global_state["awaylog"].append((int(now), logentry))
+
+        with open(awaylog_path, "a") as stream:
+            now_string = datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M:%S')
+            stream.write(now_string + "\t" + logentry_nocolor + "\n")
     return wc.WEECHAT_RC_OK
 
 if __name__ == "__main__":
