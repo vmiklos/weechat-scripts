@@ -45,6 +45,7 @@ settings = {
         'interval': '1', # How often in minutes to check
         'age_limit': '30', # How old in minutes before auto close
         'ignore': '', # Buffers to ignore (use full name: server.buffer_name)
+        'prefer': '', # Buffers to prefer, even if they are not private (use full name: server.buffer_name)
 }
 
 if w.register(SCRIPT_NAME, SCRIPT_AUTHOR, SCRIPT_VERSION, SCRIPT_LICENSE,
@@ -66,6 +67,10 @@ def get_all_buffers():
     infolist = w.infolist_get('buffer', '', '')
     while w.infolist_next(infolist):
         buffer_type = w.buffer_get_string(w.infolist_pointer(infolist, 'pointer'), 'localvar_type')
+        name = w.buffer_get_string(w.infolist_pointer(infolist, 'pointer'), 'name')
+        if name in w.config_get_plugin('prefer').split(','):
+            buffers.append(w.infolist_pointer(infolist, 'pointer'))
+            continue
         if buffer_type == 'private': # we only close private message buffers for now
             buffers.append(w.infolist_pointer(infolist, 'pointer'))
     w.infolist_free(infolist)
